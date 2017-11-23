@@ -7,3 +7,14 @@
 * ML2870A audio codec.
 
 ### PIC18F6627 pin assignments
+
+Speculative ICSP pins:
+
+* RG5: MCLR/Vpp pin.
+* RB5: PGM pin.
+* RB6: PGC serial clock pin.
+* RB7: PGD serial data pin.
+
+* RB6: debug pin?
+* RB7: debug pin?
+

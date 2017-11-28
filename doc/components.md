@@ -15,6 +15,8 @@ Speculative ICSP pins:
 * RB6: PGC serial clock pin.
 * RB7: PGD serial data pin.
 
+MSSP is probably used to drive the external serial flash.
+
 ### Nabaztag 5-pin header J2
 
 * pin 1 -> serial clock
@@ -32,11 +34,14 @@ Note: this looks like it is compatible with the PicKit3 programmer.
 * pin 3 -> GND
 * pin 4 -> VDD
 
-### processor configuration bits
+### Processor configuration bits
 FOSC   = 0x02.
 WDTEN  = 0.
 ADCON1 = 0Eh -> AN0 is used as A/D input.
 CMCON  = 7
+
+CCP1CON = 0x0C -> PWM mode
+T2CON   = 2 -> prescaler is 16 (addr 0x)
 
 ### Port A
 0: input
@@ -55,8 +60,17 @@ CMCON  = 7
 7: input ?
 
 ### Port C
+0: input ?
+1: input ?
+2: output
+3: output
+4: input
+5: output
+6: output
+7: input
 
 ### Port D
+* set to all inputs
 
 ### Port E
 * set to all outputs
@@ -76,3 +90,7 @@ CMCON  = 7
 1: input (0)
 2: input (0)
 3: output (0)
+
+### Firmware notes
+* I/O port setup is at address 0x068E4.
+* CCP1/T2 setup via W register at 0x25E0, called with 0 -> sets period reg to zero.

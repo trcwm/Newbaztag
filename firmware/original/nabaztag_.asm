@@ -4621,12 +4621,12 @@ F003FE FFFF
 01FFA 51E1			movf	0E1h,W,BANKED
 01FFC D7ED			bra		p_1FD8
 01FFE 0E9B	setup_UART	movlw	9Bh						; entry from: 698Ah
-02000 6EAF			movwf	SPBRG1
+02000 6EAF			movwf	SPBRG1                  ;
 02002 0E04			movlw	4
-02004 6EAC			movwf	TXSTA1
+02004 6EAC			movwf	TXSTA1                  ; set BRGH=1 -> high baud rates!
 02006 0E90			movlw	90h
-02008 6EAB			movwf	RCSTA1
-0200A 8AAC			bsf		TXSTA1,5
+02008 6EAB			movwf	RCSTA1                  ; SPEN=1, CREN = 1
+0200A 8AAC			bsf		TXSTA1,5                ; TX enabled
 0200C 0012			return	
 0200E 9A80	p_200E	bcf		PORTA,5					; entry from: 69E0h
 02010 9A81			bcf		PORTB,5

@@ -40,8 +40,14 @@ WDTEN  = 0.
 ADCON1 = 0Eh -> AN0 is used as A/D input.
 CMCON  = 7
 
-CCP1CON = 0x0C -> PWM mode
-T2CON   = 2 -> prescaler is 16 (addr 0x)
+CCP1CON = 0x0C -> PWM mode (uses timer2)
+T2CON   = 2 -> prescaler is 16
+
+SPBRG1  = 0x9B (8-bit baud generator, 9600 baud)
+BAUDCON = 01-0 0-00 (reset value)
+SPBRGH1 = 0x00 (reset value)
+TXSTA1:  BRGH=1 (addr 0x2004)
+RCSTA1:  SPEN=1, CREN=1 (add 0x2008)
 
 ### Port A
 0: input

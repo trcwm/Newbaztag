@@ -1,0 +1,76 @@
+nop	        0000 0000 0000 0000
+;nil	        1111 pppp pppp pppp
+addwf F,D,A	0010 01da ffff ffff
+addwfc F,D,A	0010 00da ffff ffff
+andwf F,D,A	0001 01da ffff ffff
+clrf F,A	0110 101a ffff ffff
+comf F,D,A	0001 11da ffff ffff
+cpfseq F,A	0110 001a ffff ffff
+cpfsgt F,A	0110 010a ffff ffff
+cpfslt F,A	0110 000a ffff ffff
+decf F,D,A	0000 01da ffff ffff
+decfsz F,D,A	0010 11da ffff ffff
+dcfsnz F,D,A	0100 11da ffff ffff
+incf F,D,A	0010 10da ffff ffff
+incfsz F,D,A	0011 11da ffff ffff
+infsnz F,D,A	0100 10da ffff ffff
+iorwf F,D,A	0001 00da ffff ffff
+movf F,D,A	0101 00da ffff ffff
+movff Y	        1100 ffff ffff ffff
+movwf F,A	0110 111a ffff ffff
+mulwf F,A	0000 001a ffff ffff
+negf F,A	0110 110a ffff ffff
+rlcf F,D,A	0011 01da ffff ffff
+rlncf F,D,A	0100 01da ffff ffff
+rrcf F,D,A	0011 00da ffff ffff
+rrncf F,D,A	0100 00da ffff ffff
+setf F,A	0110 100a ffff ffff
+subfwb F,D,A	0101 01da ffff ffff
+subwf F,D,A	0101 11da ffff ffff
+subwfb F,D,A	0101 10da ffff ffff
+swapf F,D,A	0011 10da ffff ffff
+tstfsz F,A	0110 011a ffff ffff
+xorwf F,D,A	0001 10da ffff ffff
+bcf F,B,A	1001 bbba ffff ffff
+bsf F,B,A	1000 bbba ffff ffff
+btfsc F,B,A	1011 bbba ffff ffff
+btfss F,B,A	1010 bbba ffff ffff
+btg F,B,A	0111 bbba ffff ffff
+bc N	        1110 0010 nnnn nnnn
+bn N	        1110 0110 nnnn nnnn
+bnc N	        1110 0011 nnnn nnnn
+bnn N	        1110 0111 nnnn nnnn
+bnov N	        1110 0101 nnnn nnnn
+bnz N	        1110 0001 nnnn nnnn
+bov N	        1110 0100 nnnn nnnn
+bra M	        1101 0nnn nnnn nnnn
+bz N	        1110 0000 nnnn nnnn
+call W	        1110 110s kkkk kkkk
+clrwdt	        0000 0000 0000 0100
+daw	        0000 0000 0000 0111
+goto W	        1110 1111 kkkk kkkk
+pop	        0000 0000 0000 0110
+push	        0000 0000 0000 0101
+rcall M	        1101 1nnn nnnn nnnn
+reset	        0000 0000 1111 1111
+retfie S	0000 0000 0001 000s
+retlw K	        0000 1100 kkkk kkkk
+return S	0000 0000 0001 001s
+sleep	        0000 0000 0000 0011
+addlw K	        0000 1111 kkkk kkkk
+andlw K	        0000 1011 kkkk kkkk
+iorlw K	        0000 1001 kkkk kkkk
+lfsr Z	        1110 1110 00ff kkkk
+movlb C	        0000 0001 0000 kkkk
+movlw K	        0000 1110 kkkk kkkk
+mullw K	        0000 1101 kkkk kkkk
+sublw K	        0000 1000 kkkk kkkk
+xorlw K	        0000 1010 kkkk kkkk
+tblrd*	        0000 0000 0000 1000
+tblrd*+	        0000 0000 0000 1001
+tblrd*-	        0000 0000 0000 1010
+tblrd+*	        0000 0000 0000 1011
+tblwt*	        0000 0000 0000 1100
+tblwt*+	        0000 0000 0000 1101
+tblwt*-	        0000 0000 0000 1110
+tblwt+*	        0000 0000 0000 1111

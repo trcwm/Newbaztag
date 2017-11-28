@@ -15,6 +15,64 @@ Speculative ICSP pins:
 * RB6: PGC serial clock pin.
 * RB7: PGD serial data pin.
 
-* RB6: debug pin?
-* RB7: debug pin?
+### Nabaztag 5-pin header J2
 
+* pin 1 -> serial clock
+* pin 2 -> serial data
+* pin 3 -> GND ?
+* pin 4 -> VDD ?
+* pin 5 -> MCLR/Vpp
+
+Note: this looks like it is compatible with the PicKit3 programmer.
+
+### Nabaztag 4-pin serial header J3
+
+* pin 1 -> ?
+* pim 2 -> ?
+* pin 3 -> GND
+* pin 4 -> VDD
+
+### processor configuration bits
+FOSC   = 0x02.
+WDTEN  = 0.
+ADCON1 = 0Eh -> AN0 is used as A/D input.
+CMCON  = 7
+
+### Port A
+0: input
+1: output (1)
+2: output (1)
+5: output (0)
+
+### Port B
+0: input
+1: input
+2: input
+3: output (1)
+4: output (1)
+5: output (0)
+6: input ?
+7: input ?
+
+### Port C
+
+### Port D
+
+### Port E
+* set to all outputs
+
+### Port F
+0: output (0)
+1: output (0)
+2: output (0)
+3: output (0)
+4: output
+5: input
+6: output
+7: output
+
+### Port G
+0: output (0)
+1: input (0)
+2: input (0)
+3: output (0)

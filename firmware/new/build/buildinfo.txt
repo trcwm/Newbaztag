@@ -1,0 +1,5 @@
+--chip=18F6627 \
+--OBJDIR=objs \
+--OUTDIR=../bin \
+--opt=all -g \
+../src/main.c

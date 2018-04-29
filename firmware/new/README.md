@@ -1,0 +1,1 @@
+You need the Microchip XC8 compilter and CMAKE v3.0 or better to compile this project.

@@ -1,9 +1,14 @@
+Information provided by Niels and Gerrit.
+
+### System view
+The LED driver, OKI audio chip and external flash memory are all connected to the same SPI bus.
+
 ### Components
 * Microchip PIC18F6627 I/PT main processor with 24 MHz crystal.
 * TI L293DNE motor driver.
 * AT45DB161 flash memory.
 * TLC5922 16 channel LED driver.
-* MPC6002 opamp (use unknown).
+* MPC6002 opamp.
 * ML2870A audio codec.
 
 ### PIC18F6627 pin assignments
@@ -19,20 +24,74 @@ MSSP is probably used to drive the external serial flash.
 
 ### Nabaztag 5-pin header J2
 
-* pin 1 -> serial clock
-* pin 2 -> serial data
-* pin 3 -> GND ?
-* pin 4 -> VDD ?
+Compatible with PICKIT 3 ICSP header
+
+* pin 1 -> serial clock (RB6)
+* pin 2 -> serial data (RB7)
+* pin 3 -> GND 
+* pin 4 -> VDD 3.3V
 * pin 5 -> MCLR/Vpp
 
 Note: this looks like it is compatible with the PicKit3 programmer.
 
 ### Nabaztag 4-pin serial header J3
 
-* pin 1 -> ?
-* pim 2 -> ?
+* pin 1 -> TXD
+* pin 2 -> RXD
 * pin 3 -> GND
-* pin 4 -> VDD
+* pin 4 -> VDD 3.3V
+
+### EAR motors
+
+EAR1:
+* RF0 - MCC1A - output to L293DNE port 1A
+* RD1 - MCC1B - output to L293DNE port 2A
+Gerrit remarks: RA3 to REF MCC1 is cut through
+
+EAR2:
+* RF2 - MCC2A - output to L293DNE port 3A
+* RF3 - MCC2B - output to L293DNE port 4A
+Gerrit remarks: RC1 to REF MCC2 is cut through
+
+Ear position comparator (MCP6002)
+* RA4 - CMPT MCC1 - input from MCP6002 port OUT A
+* RC0 - CMPT MCC2 - input from MCP6002 port OUT B
+
+### RGB LEDs
+LED driver is TLC5922 in SPI mode
+* RA5 - TLC5922 MODE pin
+* RB5 - TLC5922 XLAT pin
+* RC3 - TLC5922 SCK pin
+* RC5 - TLC5922 SIN pin
+Gerrit remarks: SOUT of TLC5922 not connected
+
+### Head button
+* RB0 - SWITCH
+
+### 3-way volume sensor
+* RA0 - SENSOR A/D (?)
+3.3V direct, 3.3V through 1kohms, GND through 1kohms.
+
+### Serial port
+* RC6 - TX1
+* RC7 - RX1
+
+### Flash memory (AT45DB161B)
+* RB1 - to RDY/BUSY(low)
+* RB3 - to RST
+* RB4 - to /CS
+* RC3 - to SPI SCK
+* RC4 - to SO
+* RC5 - to SI
+
+### Audio chip (ML2870A)
+* RB2 - to IRQ
+* RC2 - to CLK
+* RA1 - to RST
+* RA2 - to /CS
+* RC3 - to SPI SCK
+* RC4 - to SDOUT
+* RC5 - to SDIN
 
 ### Processor configuration bits
 FOSC   = 0x02.

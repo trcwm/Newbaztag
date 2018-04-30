@@ -3,7 +3,7 @@
 #pragma config XINST = OFF
 #pragma config OSC  = HS
 #pragma config PWRT = OFF
-#pragma config LVP = ON
+#pragma config LVP = OFF
 
 #include <xc.h>
 #include <stdio.h>
@@ -109,8 +109,10 @@ void initSPI()
 
     selectSPISlave(SEL_NONE);
 
+    SSP1STAT = 0;
     SSP1STATbits.SMP   = 0;     // sample in middle of data wave
     SSP1STATbits.CKE   = 1;     // SPI mode    
+    SSP1CON1 = 0;
     SSP1CON1bits.CKP   = 0;     // clock polarity
     SSP1CON1bits.SSPM  = 0b0010;    // slowest SPI mode FOSC/64 = 375kHz
     SSP1CON1bits.SSPEN = 1;     // enable SPI
@@ -147,32 +149,142 @@ void enableLEDS(unsigned char enabled)
     }
     else
     {
-        spiInOut(0xFF);
-        spiInOut(0xFF);        
+        spiInOut(0x00);
+        spiInOut(0x00);
     }
 
     // toggle XLAT
     PORTBbits.RB5 = 1;
-    printf("*");
     PORTBbits.RB5 = 0;
 }
 
+/** Send 16x 7-bit words (112 bits) in a packed 14x8-bit burst. 
+    The MSB of each ledData byte is ignored.
 
-void setLEDBrightness()
+    ledData[0]  : top LED red
+    ledData[1]  : top LED blue
+    ledData[2]  : top LED green
+    ledData[3]  : middle right LED red
+    ledData[4]  : middle right LED blue
+    ledData[5]  : middle right LED green
+    ledData[6]  : middle LED red
+    ledData[7]  : middle LED blue
+    ledData[8]  : middle LED green
+    ledData[9]  : middle left LED red
+    ledData[10] : middle left LED blue
+    ledData[11] : middle left LED green
+    ledData[12] : bottom LED red
+    ledData[13] : bottom LED blue
+    ledData[14] : bottom LED green
+    ledData[15] : none
+*/
+void setLEDBrightness(unsigned char *ledData, unsigned char testMode)
 {
     selectSPISlave(SEL_NONE);   // make sure XLAT is 0
     PORTAbits.RA5 = 1;          // brightness register select
 
-    // send 112 (16*7) bits
-    for(unsigned char i=0; i<14; i++)
+
+    if (testMode == 0)
     {
-        spiInOut(0xAA);
+        // inefficient but workable code
+        unsigned char  word = 0;
+        unsigned char  shiftcnt = 6;    // index of bit to be extracted from ledData
+        unsigned char  bitcnt = 0;      // number of bits shifted into 'word'
+        unsigned short totalWords = 14; // number of 8-bits words to transmit
+        while(totalWords > 0)
+        {
+            word <<= 1;
+            word |= ((ledData[0]>>shiftcnt) & 0x01);    // set LSB of word
+            if (shiftcnt == 0)
+            {
+                // next LED value
+                shiftcnt = 6;
+                ledData++;
+            }
+            else
+            {
+                // advance to next LED bit
+                shiftcnt--;
+            }
+
+            // check if we're ready to send out
+            // an 8-bit word to the SPI
+            bitcnt++;
+            if (bitcnt == 8)
+            {
+                bitcnt = 0;
+                spiInOut(word);
+                totalWords--;
+            }
+        }
     }
-    
+    else
+    {
+        // test mode
+        for(unsigned char i=0; i<14; i++)
+        {
+            spiInOut(0xFF);
+        }
+    }    
     // toggle XLAT
     PORTBbits.RB5 = 1;
-    printf("*");
     PORTBbits.RB5 = 0;  
+}
+
+// ************************************************************
+// Button
+// ************************************************************
+
+void initButton()
+{
+    TRISBbits.TRISB0 = 1;   // Switch as input
+}
+
+unsigned char readButton()
+{
+    return PORTBbits.RB0;
+}
+
+// ************************************************************
+// Init Audio
+// ************************************************************
+
+void initAudio()
+{
+    // setup clock to the OKI chip
+    // using ECCP1
+    TRISCbits.TRISC2 = 0;       // ECCP1 / P1A as output to OKI CLK
+    TRISBbits.TRISB2 = 1;       // OKI IRQ input
+    TRISAbits.TRISA1 = 0;       // OKI /RST
+
+    // Reset the OKI chip
+    PORTAbits.RA1 = 0;
+
+    // Measured OKI clock on original Nabaztag: 
+    // 6 MHz 50% duty cycle:
+
+    CCP1CON = 0x2C;         // PWM mode
+    CCPR1L = 0;
+    T2CON = 0;              // timer 2 off, no prescalers
+    PR2 = 0;
+    T2CONbits.TMR2ON = 1;   // timer 2 on
+
+}
+
+void resetAudio()
+{
+    PORTAbits.RA1 = 0;  // pull /OKI_RST low
+    PORTAbits.RA1 = 1;
+}
+
+unsigned char ioAudioReg(unsigned char regNo, unsigned char data)
+{
+    selectSPISlave(SEL_AUDIO);
+    spiInOut(regNo);
+    unsigned char readData = spiInOut(data);
+    selectSPISlave(SEL_NONE);
+
+    return readData;
 }
 
 // ************************************************************
@@ -181,14 +293,49 @@ void setLEDBrightness()
 
 void main() 
 {
+    unsigned char ledData[16];
+
+    ADCON1 = 0b00001111;
+
     initUART1();
     initSPI();
+    initButton();
+    initLEDS();
+    initAudio();
     enableLEDS(1);
-    setLEDBrightness();
+    resetAudio();
 
+    ioAudioReg(0x67, 0x11); // take OKI out of power down
+    ioAudioReg(0x63, 0x04); // 50% volume ( one channel only)    
+    ioAudioReg(0x43, 0xFF); // portio -> all outputs
+    ioAudioReg(0x41, 0x00); // port mode -> control by external CPU
+    ioAudioReg(0x45, 0x01); // enable amplifier
+
+    unsigned char led_idx = 0;
+    unsigned char buttonState = 0;
     while(1)
     {
-        printf("Hello, world!\n\r");
-    };
+        //printf("Hello, world!\n\r");
+        for(unsigned char i=0; i<16; i++)
+        {
+            ledData[i] = 0;
+        }
+        ledData[led_idx] = 0x7F;
+        setLEDBrightness(ledData, 0);
+        
+        resetAudio();
+
+        unsigned char newState = readButton();
+        if (newState != buttonState)
+        {
+            if (newState == 0)  // button pressed
+            {
+                led_idx++;
+                led_idx &= 0x0F;
+                printf("Led IDX = %d\n\r", led_idx);
+            }
+            buttonState = newState;            
+        }
+    }
 }
 

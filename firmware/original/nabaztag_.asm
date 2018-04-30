@@ -5372,15 +5372,19 @@ F003FE FFFF
 025D8 A0D8			btfss	STATUS,0
 025DA D7EF			bra		p_25BA
 025DC 0E01			movlw	1
-025DE 0012	p_25DE	return							; entry from: 258Eh
+025DE 0012	p_25DE	return							; entry from: 258Eh;
+
+; SET OKI CLOCK
+;
+
 025E0 6ED9	p_25E0	movwf	FSR2L					; entry from: 69A6h
 025E2 0E0C			movlw	0Ch
 025E4 6EBD			movwf	CCP1CON
-025E6 94CA			bcf		T2CON,2
+025E6 94CA			bcf		T2CON,2     ; timer 2 off
 025E8 50D9			movf	FSR2L,W
 025EA 6ECB			movwf	PR2
 025EC 9494			bcf		TRISC,2
-025EE 84CA			bsf		T2CON,2
+025EE 84CA			bsf		T2CON,2     ; timer 2 on
 025F0 0012			return	
 025F2 0092			DE 92h		;WARNING: unknown instruction!
 025F4 C092	p_25F4	movff	92h,0					; entry from: 69B2h

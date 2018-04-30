@@ -529,7 +529,7 @@ F003FE FFFF
 00002 F000			;nil
 00004 FFFF			;nil
 00006 6AEE	p____6	clrf	POSTINC0				; entry from: 0Ch,12h
-00008 50EA	p____8	movf	FSR0H,W					; entry from: 20h,2Ch,38h
+00008 50EA	p_clearBytesAt[FSR0++]	movf	FSR0H,W					; entry from: 20h,2Ch,38h
 0000A 62E2			cpfseq	FSR1H
 0000C D7FC			bra		p____6
 0000E 50E9			movf	FSR0L,W
@@ -541,23 +541,23 @@ F003FE FFFF
 0001A F029			;nil
 0001C EE1F			lfsr	1,0F00h
 0001E F000			;nil
-00020 EC04			call	p____8
+00020 EC04			call	p_clearBytesAt[FSR0++]
 00022 F000			;nil
 00024 EE00			lfsr	0,0Dh
 00026 F00D			;nil
 00028 EE10			lfsr	1,0Fh
 0002A F00F			;nil
-0002C EC04			call	p____8
+0002C EC04			call	p_clearBytesAt[FSR0++]
 0002E F000			;nil
 00030 EE00			lfsr	0,0Fh
 00032 F00F			;nil
 00034 EE12			lfsr	1,258h
 00036 F058			;nil
-00038 EC04			call	p____8
+00038 EC04			call	p_clearBytesAt[FSR0++]
 0003A F000			;nil
-0003C EE02			lfsr	0,2A4h
+0003C EE02			lfsr	0,2A4h      ; start address
 0003E F0A4			;nil
-00040 EE13			lfsr	1,329h
+00040 EE13			lfsr	1,329h      ; end address
 00042 F029			;nil
 00044 0E70			movlw	70h
 00046 6EF6			movwf	TBLPTRL
@@ -565,7 +565,7 @@ F003FE FFFF
 0004A 6EF7			movwf	TBLPTRH
 0004C 0E00			movlw	0
 0004E 6EF8			movwf	TBLPTRU
-00050 EC4F			call	p_C89E
+00050 EC4F			call	p_copyTableToFSR0Addr   ; copy from PMEM 0x0070 to 0x2A4
 00052 F064			;nil
 00054 EE00			lfsr	0,0FEh
 00056 F0FE			;nil
@@ -577,10 +577,13 @@ F003FE FFFF
 00062 6EF7			movwf	TBLPTRH
 00064 0E00			movlw	0
 00066 6EF8			movwf	TBLPTRU
-00068 EC4F			call	p_C89E
+00068 EC4F			call	p_copyTableToFSR0Addr   ; copy from PMEM 0x0016 to 0x0FE..0x100
 0006A F064			;nil
 0006C EF72			goto	setup_PORTS
 0006E F034			;nil
+
+START OF TABLE: 132 or 133 bytes long.. (to 0x0F5?)
+LOOKS LIKE OKI REGISTER SETTINGS:
 00070 1163			iorwf	63h,W,BANKED
 00072 1321			iorwf	21h,f,BANKED
 00074 1500			andwf	0,W,BANKED
@@ -600,6 +603,9 @@ F003FE FFFF
 00090 2140			addwfc	40h,W,BANKED
 00092 23C0			addwfc	0C0h,f,BANKED
 00094 3501			rlcf	1,W,BANKED
+;OKI init table ends here.. 
+
+;SOME WEIRD DATA HERE:
 00096 0C03			retlw	3
 00098 0E0D			movlw	0Dh
 0009A 0403			decf	3,W
@@ -648,6 +654,8 @@ F003FE FFFF
 000F0 7370			btg		70h,1,BANKED
 000F2 7976			btg		76h,4,BANKED
 000F4 007C			DE 7Ch		;WARNING: unknown instruction!
+END OF TABLE?!?!
+
 000F6 00AB			DE 0ABh		;WARNING: unknown instruction!
 000F8 0100	p___F8	movlb	0						; entry from: 89CCh
 000FA 6FAC			movwf	0ACh,BANKED
@@ -677,7 +685,7 @@ F003FE FFFF
 0012A F0AC			;nil
 0012C 0100			movlb	0
 0012E 51AB			movf	0ABh,W,BANKED
-00130 EF67			goto	p_26CE
+00130 EF67			goto	p_STARTMUSIC
 00132 F013			;nil
 00134 CFE8	p__134	movff	WREG,4B9h				; entry from: 8AA4h
 00136 F4B9			;nil
@@ -711,7 +719,7 @@ F003FE FFFF
 0016E 114F			iorwf	4Fh,W,BANKED
 00170 1150			iorwf	50h,W,BANKED
 00172 A4D8			btfss	STATUS,2
-00174 EC8E			call	p_271C
+00174 EC8E			call	p_STOPMUSIC
 00176 F013			;nil
 00178 0100			movlb	0
 0017A 6B4D			clrf	4Dh,BANKED
@@ -723,7 +731,7 @@ F003FE FFFF
 00186 0100	p__186	movlb	0						; entry from: 89F0h
 00188 6FAC			movwf	0ACh,BANKED
 0018A DFEE			rcall	p__168
-0018C D91F			rcall	p__3CC
+0018C D91F			rcall	p_checkStopADPCM
 0018E C011			movff	11h,0B1h
 00190 F0B1			;nil
 00192 C012			movff	12h,0B2h
@@ -1011,13 +1019,13 @@ F003FE FFFF
 003C6 EC7B			call	p_26F6
 003C8 F013			;nil
 003CA 0012	p__3CA	return							; entry from: 1DCh
-003CC 0100	p__3CC	movlb	0						; entry from: 18Ch,3F0h,7BCh,0BF4h,8A20h
+003CC 0100	p_checkStopADPCM	movlb	0						; entry from: 18Ch,3F0h,7BCh,0BF4h,8A20h
 003CE 5141			movf	41h,W,BANKED
 003D0 1142			iorwf	42h,W,BANKED
 003D2 1143			iorwf	43h,W,BANKED
 003D4 1144			iorwf	44h,W,BANKED
 003D6 A4D8			btfss	STATUS,2
-003D8 EC6E			call	p_28DC
+003D8 EC6E			call	p_stopADPCM
 003DA F014			;nil
 003DC 0100			movlb	0
 003DE 6B41			clrf	41h,BANKED
@@ -1029,7 +1037,7 @@ F003FE FFFF
 003EA 0100	p__3EA	movlb	0						; entry from: 8A1Ah
 003EC 6FAC			movwf	0ACh,BANKED
 003EE DEBC			rcall	p__168
-003F0 DFED			rcall	p__3CC
+003F0 DFED			rcall	p_checkStopADPCM
 003F2 C011			movff	11h,0B1h
 003F4 F0B1			;nil
 003F6 C012			movff	12h,0B2h
@@ -1510,12 +1518,12 @@ F003FE FFFF
 007AC 5D41			subwf	41h,W,BANKED
 007AE A0D8	p__7AE	btfss	STATUS,0				; entry from: 79Ch,7A2h,7A8h
 007B0 D006			bra		p__7BE
-007B2 0E06			movlw	6
-007B4 ECD7			call	p_29AE
+007B2 0E06			movlw	6                       ; read OKI FIFO status
+007B4 ECD7			call	p_readOKIWreg
 007B6 F014			;nil
 007B8 6E00			movwf	0
-007BA B000			btfsc	0,0
-007BC DE07			rcall	p__3CC
+007BA B000			btfsc	0,0                     ; check ADPCM empty bit
+007BC DE07			rcall	p_checkStopADPCM                  ; fill ADPCM FIFO?!?
 007BE 0100	p__7BE	movlb	0						; entry from: 67Eh,7B0h
 007C0 514D			movf	4Dh,W,BANKED
 007C2 114E			iorwf	4Eh,W,BANKED
@@ -1673,7 +1681,7 @@ F003FE FFFF
 008F2 A0D8	p__8F2	btfss	STATUS,0				; entry from: 8E0h,8E6h,8ECh
 008F4 D006			bra		p__902
 008F6 0E2C			movlw	2Ch
-008F8 ECD7			call	p_29AE
+008F8 ECD7			call	p_readOKIWreg
 008FA F014			;nil
 008FC 6E00			movwf	0
 008FE A800			btfss	0,4
@@ -2055,7 +2063,7 @@ F003FE FFFF
 00BEE 0012			return	
 00BF0 ECB4	p__BF0	call	p__168					; entry from: 72A8h
 00BF2 F000			;nil
-00BF4 EFE6			goto	p__3CC
+00BF4 EFE6			goto	p_checkStopADPCM
 00BF6 F001			;nil
 00BF8 0004	p__BF8	clrwdt							; entry from: 0D00h,2416h,24F4h,658Ah,6B18h,6B92h,6C4Ch,6D48h,6D5Ch,8A2Eh,916Ch,9352h,9540h,972Ch,9740h,0A56Eh,0A9FEh,0AA60h,0AEB0h,0AF00h,0B986h,0BAC2h,0BB28h,0BBCCh,0C524h,0C546h
 00BFA 50CE			movf	TMR1L,W
@@ -4537,10 +4545,10 @@ F003FE FFFF
 01F52 008F			DE 8Fh		;WARNING: unknown instruction!
 01F54 905E			bcf		5Eh,0
 01F56 0000			nop
-01F58 6EE1	p_1F58	movwf	FSR1L					; entry from: 268Ah,2696h,270Ch,28D8h,2E2Ah,2E32h,2E50h,2E62h,2E68h,30CCh,6114h,613Ch,6986h,69BAh,69D8h,6AFCh
-01F5A 0E04	p_1F5A	movlw	4						; entry from: 1F7Ah
+01F58 6EE1	p_ultraLongDelay	movwf	FSR1L					; entry from: 268Ah,2696h,270Ch,28D8h,2E2Ah,2E32h,2E50h,2E62h,2E68h,30CCh,6114h,613Ch,6986h,69BAh,69D8h,6AFCh
+01F5A 0E04	p_superLongDelay	movlw	4						; entry from: 1F7Ah
 01F5C 6ED9			movwf	FSR2L
-01F5E 0EFA	p_1F5E	movlw	0FAh					; entry from: 1F76h
+01F5E 0EFA	p_longDelay	movlw	0FAh					; entry from: 1F76h, setup delay time
 01F60 CFE8			movff	WREG,334h
 01F62 F334			;nil
 01F64 0103			movlb	3
@@ -4552,9 +4560,9 @@ F003FE FFFF
 01F70 F00F			;nil
 01F72 0004			clrwdt
 01F74 2ED9			decfsz	FSR2L
-01F76 D7F3			bra		p_1F5E
+01F76 D7F3			bra		p_longDelay
 01F78 2EE1			decfsz	FSR1L
-01F7A D7EF			bra		p_1F5A
+01F7A D7EF			bra		p_superLongDelay
 01F7C 0012			return	
 01F7E A89E	p_1F7E	btfss	PIR1,4					; entry from: 1F80h,1FB8h,1FD6h,25B2h,3620h,4A3Ah,6720h,672Eh,6734h,0B5B8h,0B72Ch,0BBD4h
 01F80 D7FE			bra		p_1F7E
@@ -4631,9 +4639,9 @@ F003FE FFFF
 0200E 9A80	p_200E	bcf		PORTA,5					; entry from: 69E0h
 02010 9A81			bcf		PORTB,5
 02012 0EFF			movlw	0FFh
-02014 D9EF			rcall	p_23F4
+02014 D9EF			rcall	SPITX
 02016 0EFF			movlw	0FFh
-02018 D9ED			rcall	p_23F4
+02018 D9ED			rcall	SPITX
 0201A 8A81			bsf		PORTB,5
 0201C 9A81			bcf		PORTB,5
 0201E 8A80			bsf		PORTA,5
@@ -4641,7 +4649,7 @@ F003FE FFFF
 02022 0100			movlb	0
 02024 6B92			clrf	92h,BANKED
 02026 0E00	p_2026	movlw	0						; entry from: 2032h
-02028 D9E5			rcall	p_23F4
+02028 D9E5			rcall	SPITX
 0202A 0100			movlb	0
 0202C 2B92			incf	92h,f,BANKED
 0202E 0E0D			movlw	0Dh
@@ -5117,7 +5125,7 @@ F003FE FFFF
 023DA 0E00			movlw	0
 023DC 22EA			addwfc	FSR0H
 023DE 50EF			movf	INDF0,W
-023E0 D809			rcall	p_23F4
+023E0 D809			rcall	SPITX
 023E2 0100			movlb	0
 023E4 2BC9			incf	0C9h,f,BANKED
 023E6 0E0D			movlw	0Dh
@@ -5127,7 +5135,7 @@ F003FE FFFF
 023EE 9A81			bcf		PORTB,5
 023F0 80D8			bsf		STATUS,0
 023F2 0012			return	
-023F4 6EC9	p_23F4	movwf	SSPBUF					; entry from: 2014h,2018h,2028h,23E0h,2424h,243Eh,2456h,245Ch,249Eh,24A6h,24DAh,24E2h,2504h,251Eh,2536h,253Ch,2640h,2646h,264Eh,2654h,266Ch,267Ch,26B0h,26C8h,26D4h,26E0h,26E8h,26ECh,2702h,2706h,2712h,2716h,2726h,272Ah,2732h,2736h,2770h,2774h,277Ch,27B0h,27C4h,27C8h,280Ah,280Eh,2816h,2862h,2876h,287Ah,289Eh,28BAh,28C2h,28C6h,28CEh,28D2h,28E6h,28EAh,28F2h,28F6h,2936h,293Ah,2942h,2976h,298Ah,298Eh,29B4h
+023F4 6EC9	SPITX	movwf	SSPBUF					; entry from: 2014h,2018h,2028h,23E0h,2424h,243Eh,2456h,245Ch,249Eh,24A6h,24DAh,24E2h,2504h,251Eh,2536h,253Ch,2640h,2646h,264Eh,2654h,266Ch,267Ch,26B0h,26C8h,26D4h,26E0h,26E8h,26ECh,2702h,2706h,2712h,2716h,2726h,272Ah,2732h,2736h,2770h,2774h,277Ch,27B0h,27C4h,27C8h,280Ah,280Eh,2816h,2862h,2876h,287Ah,289Eh,28BAh,28C2h,28C6h,28CEh,28D2h,28E6h,28EAh,28F2h,28F6h,2936h,293Ah,2942h,2976h,298Ah,298Eh,29B4h
 023F6 AEC6			btfss	SSPCON1,7
 023F8 D002			bra		p_23FE
 023FA 0EFF			movlw	0FFh
@@ -5151,7 +5159,7 @@ F003FE FFFF
 0241E 6AD9			clrf	FSR2L
 02420 9881			bcf		PORTB,4
 02422 0E82			movlw	82h
-02424 DFE7			rcall	p_23F4
+02424 DFE7			rcall	SPITX
 02426 C0CD			movff	0CDh,0
 02428 F000			;nil
 0242A C0CE			movff	0CEh,1
@@ -5164,7 +5172,7 @@ F003FE FFFF
 02438 2E02			decfsz	2
 0243A D7FB			bra		p_2432
 0243C 5000			movf	0,W
-0243E DFDA			rcall	p_23F4
+0243E DFDA			rcall	SPITX
 02440 0100			movlb	0
 02442 51D0			movf	0D0h,W,BANKED
 02444 6E00			movwf	0
@@ -5176,10 +5184,10 @@ F003FE FFFF
 02450 1602			andwf	2
 02452 5000			movf	0,W
 02454 2402			addwf	2,W
-02456 DFCE			rcall	p_23F4
+02456 DFCE			rcall	SPITX
 02458 0100			movlb	0
 0245A 51CF			movf	0CFh,W,BANKED
-0245C DFCB			rcall	p_23F4
+0245C DFCB			rcall	SPITX
 0245E 0100			movlb	0
 02460 90D8			bcf		STATUS,0
 02462 33CC			rrcf	0CCh,f,BANKED
@@ -5212,11 +5220,11 @@ F003FE FFFF
 02498 4AE1			infsnz	FSR1L
 0249A 2AE2			incf	FSR1H
 0249C 50EF			movf	INDF0,W
-0249E DFAA			rcall	p_23F4
+0249E DFAA			rcall	SPITX
 024A0 D7EA			bra		p_2476
 024A2 50D9	p_24A2	movf	FSR2L,W					; entry from: 248Ah
 024A4 08FF			sublw	0FFh
-024A6 DFA6			rcall	p_23F4
+024A6 DFA6			rcall	SPITX
 024A8 6AD9			clrf	FSR2L
 024AA C0CB			movff	0CBh,PRODL
 024AC FFF3			;nil
@@ -5242,11 +5250,11 @@ F003FE FFFF
 024D4 4AE1			infsnz	FSR1L
 024D6 2AE2			incf	FSR1H
 024D8 50EF			movf	INDF0,W
-024DA DF8C			rcall	p_23F4
+024DA DF8C			rcall	SPITX
 024DC D7EA			bra		p_24B2
 024DE 50D9	p_24DE	movf	FSR2L,W					; entry from: 24C6h
 024E0 08FF			sublw	0FFh
-024E2 DF88			rcall	p_23F4
+024E2 DF88			rcall	SPITX
 024E4 8881			bsf		PORTB,4
 024E6 8EC7			bsf		SSPSTAT,7
 024E8 0C00			retlw	0
@@ -5263,7 +5271,7 @@ F003FE FFFF
 024FE 9EC7			bcf		SSPSTAT,7
 02500 9881			bcf		PORTB,4
 02502 0EE8			movlw	0E8h
-02504 DF77			rcall	p_23F4
+02504 DF77			rcall	SPITX
 02506 C0DC			movff	0DCh,0
 02508 F000			;nil
 0250A C0DD			movff	0DDh,1
@@ -5276,7 +5284,7 @@ F003FE FFFF
 02518 2E02			decfsz	2
 0251A D7FB			bra		p_2512
 0251C 5000			movf	0,W
-0251E DF6A			rcall	p_23F4
+0251E DF6A			rcall	SPITX
 02520 0100			movlb	0
 02522 51DF			movf	0DFh,W,BANKED
 02524 6E00			movwf	0
@@ -5288,10 +5296,10 @@ F003FE FFFF
 02530 1602			andwf	2
 02532 5000			movf	0,W
 02534 2402			addwf	2,W
-02536 DF5E			rcall	p_23F4
+02536 DF5E			rcall	SPITX
 02538 0100			movlb	0
 0253A 51DE			movf	0DEh,W,BANKED
-0253C DF5B			rcall	p_23F4
+0253C DF5B			rcall	SPITX
 0253E DF63			rcall	p_2406
 02540 DF62			rcall	p_2406
 02542 DF61			rcall	p_2406
@@ -5423,55 +5431,55 @@ F003FE FFFF
 02636 6EBD			movwf	CCP1CON
 02638 0012			return	
 0263A 008D			DE 8Dh		;WARNING: unknown instruction!
-0263C 9480			bcf		PORTA,2
-0263E 0E21			movlw	21h
-02640 DED9			rcall	p_23F4
+0263C 9480			bcf		PORTA,2                 ; SELECT OKI CHIP
+0263E 0E21			movlw	21h                     ; write register 21 (ADPCM Interrupt L)
+02640 DED9			rcall	SPITX
 02642 0100			movlb	0
 02644 518D			movf	8Dh,W,BANKED
-02646 DED6			rcall	p_23F4
+02646 DED6			rcall	SPITX
 02648 8480			bsf		PORTA,2
-0264A 9480			bcf		PORTA,2
+0264A 9480			bcf		PORTA,2                 ; SELECT OKI CHIP
 0264C 0E23			movlw	23h
-0264E DED2			rcall	p_23F4
+0264E DED2			rcall	SPITX                   ; write register 21 (ADPCM Interrupt L)
 02650 0100			movlb	0
 02652 518E			movf	8Eh,W,BANKED
-02654 DECF			rcall	p_23F4
+02654 DECF			rcall	SPITX
 02656 8480			bsf		PORTA,2
 02658 0012			return	
-0265A 6AF3	p_265A	clrf	PRODL					; entry from: 69DCh
-0265C 9480	p_265C	bcf		PORTA,2					; entry from: 26A0h
-0265E 50F3			movf	PRODL,W
-02660 EE02			lfsr	0,2A5h
+0265A 6AF3	p_sendTableAt0x2A5toOKI	clrf	PRODL					; entry from: 69DCh
+0265C 9480	p_265C	bcf		PORTA,2					; entry from: 26A0h ; SELECT OKI CHIP
+0265E 50F3			movf	PRODL,W                 ; PRODL is some kind of offset counter
+02660 EE02			lfsr	0,2A5h                  ; table start address
 02662 F0A5			;nil
-02664 26E9			addwf	FSR0L
-02666 0E00			movlw	0
-02668 22EA			addwfc	FSR0H
-0266A 50EF			movf	INDF0,W
-0266C DEC3			rcall	p_23F4
+02664 26E9			addwf	FSR0L       ; w = w + FSR0L
+02666 0E00			movlw	0           ; w = 0
+02668 22EA			addwfc	FSR0H       ; w++ if previous add generated a carry
+0266A 50EF			movf	INDF0,W     ; [FSR0] -> W
+0266C DEC3			rcall	SPITX
 0266E 50F3			movf	PRODL,W
-02670 EE02			lfsr	0,2A6h
+02670 EE02			lfsr	0,2A6h                  ; table start address +1
 02672 F0A6			;nil
 02674 26E9			addwf	FSR0L
 02676 0E00			movlw	0
 02678 22EA			addwfc	FSR0H
 0267A 50EF			movf	INDF0,W
-0267C DEBB			rcall	p_23F4
+0267C DEBB			rcall	SPITX
 0267E 8480			bsf		PORTA,2
 02680 50F3			movf	PRODL,W
 02682 0A10			xorlw	10h
 02684 A4D8			btfss	STATUS,2
 02686 D002			bra		p_268C
 02688 0E02			movlw	2
-0268A DC66			rcall	p_1F58
+0268A DC66			rcall	p_ultraLongDelay
 0268C 50F3	p_268C	movf	PRODL,W					; entry from: 2686h
 0268E 0A14			xorlw	14h
 02690 A4D8			btfss	STATUS,2
 02692 D002			bra		p_2698
 02694 0E28			movlw	28h
-02696 DC60			rcall	p_1F58
+02696 DC60			rcall	p_ultraLongDelay
 02698 0E02	p_2698	movlw	2						; entry from: 2692h
 0269A 26F3			addwf	PRODL
-0269C 0E25			movlw	25h
+0269C 0E25			movlw	25h                     ; table offset >25h -> skip
 0269E 64F3			cpfsgt	PRODL
 026A0 D7DD			bra		p_265C
 026A2 0103			movlb	3
@@ -5479,76 +5487,76 @@ F003FE FFFF
 026A6 0103			movlb	3
 026A8 6B3B			clrf	3Bh,BANKED
 026AA 0012			return	
-026AC 9480	p_26AC	bcf		PORTA,2					; entry from: 26F4h,26FCh,2720h,2898h,28E0h
-026AE 0E45			movlw	45h
-026B0 DEA1			rcall	p_23F4
+026AC 9480	p_SETAUDIOPWR	bcf		PORTA,2					; entry from: 26F4h,26FCh,2720h,2898h,28E0h SELECT OKI
+026AE 0E45			movlw	45h                     ; set PORT 
+026B0 DEA1			rcall	SPITX
 026B2 0103			movlb	3
 026B4 533B			movf	3Bh,f,BANKED
 026B6 B4D8			btfsc	STATUS,2
-026B8 D006			bra		p_26C6
+026B8 D006			bra		p_AUDIOPWROFF
 026BA 0103			movlb	3
 026BC 533A			movf	3Ah,f,BANKED
 026BE B4D8			btfsc	STATUS,2
-026C0 D002			bra		p_26C6
+026C0 D002			bra		p_AUDIOPWROFF
 026C2 0E01			movlw	1
 026C4 D001			bra		p_26C8
-026C6 0E00	p_26C6	movlw	0						; entry from: 26B8h,26C0h
-026C8 DE95	p_26C8	rcall	p_23F4					; entry from: 26C4h
+026C6 0E00	p_AUDIOPWROFF	movlw	0						; entry from: 26B8h,26C0h
+026C8 DE95	p_26C8	rcall	SPITX					; entry from: 26C4h
 026CA 8480			bsf		PORTA,2
 026CC 0012			return	
-026CE 6ED9	p_26CE	movwf	FSR2L					; entry from: 130h,6614h
-026D0 9480			bcf		PORTA,2
-026D2 0E63			movlw	63h
-026D4 DE8F			rcall	p_23F4
+026CE 6ED9	p_STARTMUSIC	movwf	FSR2L					; entry from: 130h,6614h
+026D0 9480			bcf		PORTA,2                 ; select OKI
+026D2 0E63			movlw	63h                     ; write volume register
+026D4 DE8F			rcall	SPITX
 026D6 50D9			movf	FSR2L,W
 026D8 08FF			sublw	0FFh
 026DA 6E00			movwf	0
 026DC 3800			swapf	0,W
 026DE 0B0F			andlw	0Fh
-026E0 DE89			rcall	p_23F4
+026E0 DE89			rcall	SPITX
 026E2 8480			bsf		PORTA,2
 026E4 9480			bcf		PORTA,2
-026E6 0E39			movlw	39h
-026E8 DE85			rcall	p_23F4
+026E6 0E39			movlw	39h                     ; write ADPCM volume
+026E8 DE85			rcall	SPITX
 026EA 0E05			movlw	5
-026EC DE83			rcall	p_23F4
+026EC DE83			rcall	SPITX
 026EE 8480			bsf		PORTA,2
 026F0 CFD9			movff	FSR2L,33Bh
 026F2 F33B			;nil
-026F4 D7DB			bra		p_26AC
+026F4 D7DB			bra		p_SETAUDIOPWR
 026F6 0E01	p_26F6	movlw	1						; entry from: 3C6h,65F6h
 026F8 CFE8			movff	WREG,33Ah
 026FA F33A			;nil
-026FC DFD7			rcall	p_26AC
+026FC DFD7			rcall	p_SETAUDIOPWR
 026FE 9480			bcf		PORTA,2
-02700 0E31			movlw	31h
-02702 DE78			rcall	p_23F4
-02704 0E01			movlw	1
-02706 DE76			rcall	p_23F4
+02700 0E31			movlw	31h                     ; music start
+02702 DE78			rcall	SPITX
+02704 0E01			movlw	1                       ; start the music
+02706 DE76			rcall	SPITX
 02708 8480			bsf		PORTA,2
 0270A 0E0A			movlw	0Ah
-0270C DC25			rcall	p_1F58
+0270C DC25			rcall	p_ultraLongDelay
 0270E 9480			bcf		PORTA,2
-02710 0E29			movlw	29h
-02712 DE70			rcall	p_23F4
-02714 0E02			movlw	2
-02716 DE6E			rcall	p_23F4
+02710 0E29			movlw	29h                     ; setOKI interrupt enable
+02712 DE70			rcall	SPITX
+02714 0E02			movlw	2                       ; set SIE IRQ enable
+02716 DE6E			rcall	SPITX
 02718 8480			bsf		PORTA,2
 0271A 0012			return	
-0271C 0103	p_271C	movlb	3						; entry from: 174h,65F2h,668Ah
+0271C 0103	p_STOPMUSIC	movlb	3						; entry from: 174h,65F2h,668Ah
 0271E 6B3A			clrf	3Ah,BANKED
-02720 DFC5			rcall	p_26AC
+02720 DFC5			rcall	p_SETAUDIOPWR
 02722 9480			bcf		PORTA,2
-02724 0E31			movlw	31h
-02726 DE66			rcall	p_23F4
-02728 0E00			movlw	0
-0272A DE64			rcall	p_23F4
+02724 0E31			movlw	31h                     ; write MUSIC START
+02726 DE66			rcall	SPITX
+02728 0E00			movlw	0                       ; stop msuic
+0272A DE64			rcall	SPITX
 0272C 8480			bsf		PORTA,2
 0272E 9480			bcf		PORTA,2
-02730 0E29			movlw	29h
-02732 DE60			rcall	p_23F4
-02734 0E00			movlw	0
-02736 DE5E			rcall	p_23F4
+02730 0E29			movlw	29h                     ; interrupt enable
+02732 DE60			rcall	SPITX
+02734 0E00			movlw	0                       ; disable all OKI IRQs
+02736 DE5E			rcall	SPITX
 02738 8480			bsf		PORTA,2
 0273A 0012			return	
 0273C 00CB			DE 0CBh		;WARNING: unknown instruction!
@@ -5576,14 +5584,14 @@ F003FE FFFF
 02768 6BCD			clrf	0CDh,BANKED
 0276A 6BCE			clrf	0CEh,BANKED
 0276C 9480	p_276C	bcf		PORTA,2					; entry from: 2760h
-0276E 0E29			movlw	29h
-02770 DE41			rcall	p_23F4
-02772 0E00			movlw	0
-02774 DE3F			rcall	p_23F4
+0276E 0E29			movlw	29h                     ; set OKI IRQs
+02770 DE41			rcall	SPITX
+02772 0E00			movlw	0                       ; IRQs off!
+02774 DE3F			rcall	SPITX
 02776 8480			bsf		PORTA,2
 02778 9480			bcf		PORTA,2
-0277A 0E03			movlw	3
-0277C DE3B			rcall	p_23F4
+0277A 0E03			movlw	3                       ; score FIFO
+0277C DE3B			rcall	SPITX
 0277E 6A00			clrf	0
 02780 6A01			clrf	1
 02782 6A02			clrf	2
@@ -5609,7 +5617,7 @@ F003FE FFFF
 027AA 4AE1			infsnz	FSR1L
 027AC 2AE2			incf	FSR1H
 027AE 50EF			movf	INDF0,W
-027B0 DE21			rcall	p_23F4
+027B0 DE21			rcall	SPITX
 027B2 2A00			incf	0
 027B4 0E00			movlw	0
 027B6 2201			addwfc	1
@@ -5619,9 +5627,9 @@ F003FE FFFF
 027BE 8480	p_27BE	bsf		PORTA,2					; entry from: 27A0h
 027C0 9480			bcf		PORTA,2
 027C2 0E29			movlw	29h
-027C4 DE17			rcall	p_23F4
+027C4 DE17			rcall	SPITX
 027C6 0E02			movlw	2
-027C8 DE15			rcall	p_23F4
+027C8 DE15			rcall	SPITX
 027CA 8480			bsf		PORTA,2
 027CC C0CB			movff	0CBh,0
 027CE F000			;nil
@@ -5654,13 +5662,13 @@ F003FE FFFF
 02804 6BA7			clrf	0A7h,BANKED
 02806 9480	p_2806	bcf		PORTA,2					; entry from: 27FAh
 02808 0E29			movlw	29h
-0280A DDF4			rcall	p_23F4
+0280A DDF4			rcall	SPITX
 0280C 0E00			movlw	0
-0280E DDF2			rcall	p_23F4
+0280E DDF2			rcall	SPITX
 02810 8480			bsf		PORTA,2
 02812 9480			bcf		PORTA,2
 02814 0E03			movlw	3
-02816 DDEE			rcall	p_23F4
+02816 DDEE			rcall	SPITX
 02818 6A00			clrf	0
 0281A 6A01			clrf	1
 0281C 6A02			clrf	2
@@ -5698,7 +5706,7 @@ F003FE FFFF
 0285C CFF7			movff	TBLPTRH,FSR0H
 0285E FFEA			;nil
 02860 50EF			movf	INDF0,W
-02862 DDC8	p_2862	rcall	p_23F4					; entry from: 2856h
+02862 DDC8	p_2862	rcall	SPITX					; entry from: 2856h
 02864 2A00			incf	0
 02866 0E00			movlw	0
 02868 2201			addwfc	1
@@ -5708,9 +5716,9 @@ F003FE FFFF
 02870 8480	p_2870	bsf		PORTA,2					; entry from: 283Ah
 02872 9480			bcf		PORTA,2
 02874 0E29			movlw	29h
-02876 DDBE			rcall	p_23F4
+02876 DDBE			rcall	SPITX
 02878 0E02			movlw	2
-0287A DDBC			rcall	p_23F4
+0287A DDBC			rcall	SPITX
 0287C 8480			bsf		PORTA,2
 0287E C0A4			movff	0A4h,0
 02880 F000			;nil
@@ -5725,10 +5733,10 @@ F003FE FFFF
 02892 0E01			movlw	1
 02894 CFE8			movff	WREG,33Ah
 02896 F33A			;nil
-02898 DF09			rcall	p_26AC
+02898 DF09			rcall	p_SETAUDIOPWR
 0289A 9480			bcf		PORTA,2
 0289C 0E35			movlw	35h
-0289E DDAA			rcall	p_23F4
+0289E DDAA			rcall	SPITX
 028A0 50D9			movf	FSR2L,W
 028A2 0A7D			xorlw	7Dh
 028A4 B4D8			btfsc	STATUS,2
@@ -5742,37 +5750,37 @@ F003FE FFFF
 028B4 0E03	p_28B4	movlw	3						; entry from: 28AEh
 028B6 D001			bra		p_28BA
 028B8 0E07	p_28B8	movlw	7						; entry from: 28A6h
-028BA DD9C	p_28BA	rcall	p_23F4					; entry from: 28B2h,28B6h
+028BA DD9C	p_28BA	rcall	SPITX					; entry from: 28B2h,28B6h
 028BC 8480			bsf		PORTA,2
 028BE 9480			bcf		PORTA,2
-028C0 0E29			movlw	29h
-028C2 DD98			rcall	p_23F4
-028C4 0E01			movlw	1
-028C6 DD96			rcall	p_23F4
+028C0 0E29			movlw	29h                     ; OKI IRQ enable
+028C2 DD98			rcall	SPITX
+028C4 0E01			movlw	1                       ; set AIE
+028C6 DD96			rcall	SPITX
 028C8 8480			bsf		PORTA,2
 028CA 9480			bcf		PORTA,2
-028CC 0E33			movlw	33h
-028CE DD92			rcall	p_23F4
+028CC 0E33			movlw	33h                     ; ADPCM start reg
+028CE DD92			rcall	SPITX
 028D0 0E01			movlw	1
-028D2 DD90			rcall	p_23F4
+028D2 DD90			rcall	SPITX
 028D4 8480			bsf		PORTA,2
 028D6 0E0A			movlw	0Ah
-028D8 EFAC			goto	p_1F58
+028D8 EFAC			goto	p_ultraLongDelay
 028DA F00F			;nil
-028DC 0103	p_28DC	movlb	3						; entry from: 3D8h
+028DC 0103	p_stopADPCM	movlb	3						; entry from: 3D8h
 028DE 6B3A			clrf	3Ah,BANKED
-028E0 DEE5			rcall	p_26AC
+028E0 DEE5			rcall	p_SETAUDIOPWR
 028E2 9480			bcf		PORTA,2
-028E4 0E33			movlw	33h
-028E6 DD86			rcall	p_23F4
-028E8 0E00			movlw	0
-028EA DD84			rcall	p_23F4
+028E4 0E33			movlw	33h                     ; ADPCM start reg
+028E6 DD86			rcall	SPITX
+028E8 0E00			movlw	0                       ; stop playing
+028EA DD84			rcall	SPITX
 028EC 8480			bsf		PORTA,2
 028EE 9480			bcf		PORTA,2
-028F0 0E29			movlw	29h
-028F2 DD80			rcall	p_23F4
-028F4 0E00			movlw	0
-028F6 DD7E			rcall	p_23F4
+028F0 0E29			movlw	29h                     ; OKI IRQ reg
+028F2 DD80			rcall	SPITX
+028F4 0E00			movlw	0                       ; disable ADPCM IRQ
+028F6 DD7E			rcall	SPITX
 028F8 8480			bsf		PORTA,2
 028FA 0012			return	
 028FC 00CB			DE 0CBh		;WARNING: unknown instruction!
@@ -5793,7 +5801,7 @@ F003FE FFFF
 0291A 51CB			movf	0CBh,W,BANKED
 0291C 5DD1			subwf	0D1h,W,BANKED
 0291E B0D8	p_291E	btfsc	STATUS,0				; entry from: 290Ch,2912h,2918h
-02920 D008			bra		p_2932
+02920 D008			bra		p_STOPADPCM
 02922 C0D1			movff	0D1h,0CBh
 02924 F0CB			;nil
 02926 C0D2			movff	0D2h,0CCh
@@ -5802,15 +5810,15 @@ F003FE FFFF
 0292C F0CD			;nil
 0292E C0D4			movff	0D4h,0CEh
 02930 F0CE			;nil
-02932 9480	p_2932	bcf		PORTA,2					; entry from: 2920h
+02932 9480	p_STOPADPCM	bcf		PORTA,2					; entry from: 2920h
 02934 0E29			movlw	29h
-02936 DD5E			rcall	p_23F4
+02936 DD5E			rcall	SPITX
 02938 0E00			movlw	0
-0293A DD5C			rcall	p_23F4
+0293A DD5C			rcall	SPITX
 0293C 8480			bsf		PORTA,2
 0293E 9480			bcf		PORTA,2
 02940 0E01			movlw	1
-02942 DD58			rcall	p_23F4
+02942 DD58			rcall	SPITX
 02944 6A00			clrf	0
 02946 6A01			clrf	1
 02948 6A02			clrf	2
@@ -5836,7 +5844,7 @@ F003FE FFFF
 02970 4AE1			infsnz	FSR1L
 02972 2AE2			incf	FSR1H
 02974 50EF			movf	INDF0,W
-02976 DD3E			rcall	p_23F4
+02976 DD3E			rcall	SPITX
 02978 2A00			incf	0
 0297A 0E00			movlw	0
 0297C 2201			addwfc	1
@@ -5846,9 +5854,9 @@ F003FE FFFF
 02984 8480	p_2984	bsf		PORTA,2					; entry from: 2966h
 02986 9480			bcf		PORTA,2
 02988 0E29			movlw	29h
-0298A DD34			rcall	p_23F4
+0298A DD34			rcall	SPITX
 0298C 0E01			movlw	1
-0298E DD32			rcall	p_23F4
+0298E DD32			rcall	SPITX
 02990 8480			bsf		PORTA,2
 02992 C0CB			movff	0CBh,0
 02994 F000			;nil
@@ -5864,10 +5872,10 @@ F003FE FFFF
 029A8 B481			btfsc	PORTB,2
 029AA 0E01			movlw	1
 029AC 0012			return	
-029AE 6ED9	p_29AE	movwf	FSR2L					; entry from: 7B4h,8F8h,6680h
+029AE 6ED9	p_readOKIWreg	movwf	FSR2L					; entry from: 7B4h,8F8h,6680h
 029B0 9480			bcf		PORTA,2
 029B2 50D9			movf	FSR2L,W
-029B4 DD1F			rcall	p_23F4
+029B4 DD1F			rcall	SPITX
 029B6 DD27			rcall	p_2406
 029B8 6ED9			movwf	FSR2L
 029BA 8480			bsf		PORTA,2
@@ -6438,11 +6446,11 @@ F003FE FFFF
 02E24 8A85			bsf		PORTF,5
 02E26 8885			bsf		PORTF,4
 02E28 0E64			movlw	64h
-02E2A ECAC			call	p_1F58
+02E2A ECAC			call	p_ultraLongDelay
 02E2C F00F			;nil
 02E2E 9885			bcf		PORTF,4
 02E30 0E64			movlw	64h
-02E32 ECAC			call	p_1F58
+02E32 ECAC			call	p_ultraLongDelay
 02E34 F00F			;nil
 02E36 0103			movlb	3
 02E38 6B30			clrf	30h,BANKED
@@ -6457,7 +6465,7 @@ F003FE FFFF
 02E4A 0100	p_2E4A	movlb	0						; entry from: 6AC0h,6BE6h
 02E4C 6B93			clrf	93h,BANKED
 02E4E 0E0A			movlw	0Ah
-02E50 ECAC			call	p_1F58
+02E50 ECAC			call	p_ultraLongDelay
 02E52 F00F			;nil
 02E54 0E01			movlw	1
 02E56 0100			movlb	0
@@ -6466,10 +6474,10 @@ F003FE FFFF
 02E5C EC7A			call	p_3EF4
 02E5E F01F			;nil
 02E60 0E64			movlw	64h
-02E62 ECAC			call	p_1F58
+02E62 ECAC			call	p_ultraLongDelay
 02E64 F00F			;nil
 02E66 0E64			movlw	64h
-02E68 ECAC			call	p_1F58
+02E68 ECAC			call	p_ultraLongDelay
 02E6A F00F			;nil
 02E6C 0100			movlb	0
 02E6E 6BEE			clrf	0EEh,BANKED
@@ -6775,7 +6783,7 @@ F003FE FFFF
 030C6 EC6D			call	p_3CDA
 030C8 F01E			;nil
 030CA 0E0A			movlw	0Ah
-030CC ECAC			call	p_1F58
+030CC ECAC			call	p_ultraLongDelay
 030CE F00F			;nil
 030D0 0100			movlb	0
 030D2 6BEE			clrf	0EEh,BANKED
@@ -12955,7 +12963,7 @@ F003FE FFFF
 0610E A0D8	p_610E	btfss	STATUS,0				; entry from: 60FCh,6102h,6108h
 06110 D00D			bra		p_612C
 06112 0E14			movlw	14h
-06114 ECAC			call	p_1F58
+06114 ECAC			call	p_ultraLongDelay
 06116 F00F			;nil
 06118 0100			movlb	0
 0611A 0EEC			movlw	0ECh
@@ -12975,7 +12983,7 @@ F003FE FFFF
 06136 B4D8			btfsc	STATUS,2
 06138 D003			bra		p_6140
 0613A 51C1			movf	0C1h,W,BANKED
-0613C ECAC			call	p_1F58
+0613C ECAC			call	p_ultraLongDelay
 0613E F00F			;nil
 06140 0012	p_6140	return							; entry from: 6138h
 06142 0092			DE 92h		;WARNING: unknown instruction!
@@ -13023,7 +13031,7 @@ F003FE FFFF
 06196 B081			btfsc	PORTB,0
 06198 80D8			bsf		STATUS,0
 0619A 0012			return	
-0619C 96C2	p_619C	bcf		ADCON0,3				; entry from: 65FAh,0C6FEh,0C730h
+0619C 96C2	p_readADC	bcf		ADCON0,3				; entry from: 65FAh,0C6FEh,0C730h
 0619E 94C2			bcf		ADCON0,2
 061A0 82C2			bsf		ADCON0,1
 061A2 B2C2	p_61A2	btfsc	ADCON0,1				; entry from: 61A4h
@@ -13578,11 +13586,11 @@ F003FE FFFF
 065EC 0012			return	
 065EE D7F0			bra		p_65D0
 065F0 009E			DE 9Eh		;WARNING: unknown instruction!
-065F2 EC8E	p_65F2	call	p_271C					; entry from: 66A2h,6A36h
+065F2 EC8E	p_65F2	call	p_STOPMUSIC					; entry from: 66A2h,6A36h
 065F4 F013			;nil
 065F6 EC7B			call	p_26F6
 065F8 F013			;nil
-065FA DDD0			rcall	p_619C
+065FA DDD0			rcall	p_readADC
 065FC 6EE1			movwf	FSR1L
 065FE 50E1			movf	FSR1L,W
 06600 B4D8			btfsc	STATUS,2
@@ -13595,7 +13603,7 @@ F003FE FFFF
 0660E 0EC8	p_660E	movlw	0C8h					; entry from: 6608h
 06610 D001			bra		p_6614
 06612 0E00	p_6612	movlw	0						; entry from: 6602h
-06614 EC67	p_6614	call	p_26CE					; entry from: 660Ch,6610h
+06614 EC67	p_6614	call	p_STARTMUSIC					; entry from: 660Ch,6610h
 06616 F013			;nil
 06618 6A04			clrf	4
 0661A 6A05			clrf	5
@@ -13648,13 +13656,13 @@ F003FE FFFF
 06678 2206			addwfc	6
 0667A 5003			movf	3,W
 0667C 2207			addwfc	7
-0667E 0E2C	p_667E	movlw	2Ch						; entry from: 6628h,6644h
-06680 ECD7			call	p_29AE
+0667E 0E2C	p_667E	movlw	2Ch						; entry from: 6628h,6644h OKI STATUS
+06680 ECD7			call	p_readOKIWreg
 06682 F014			;nil
 06684 6E00			movwf	0
-06686 B800			btfsc	0,4
+06686 B800			btfsc	0,4                     ; check sequencer status bit
 06688 D7CB			bra		p_6620
-0668A EF8E			goto	p_271C
+0668A EF8E			goto	p_STOPMUSIC
 0668C F013			;nil
 0668E 0E73	p_668E	movlw	73h						; entry from: 7548h
 06690 0100			movlb	0
@@ -14036,7 +14044,7 @@ F003FE FFFF
 06980 0E06			movlw	6
 06982 6EC0			movwf	ADCON2
 06984 0E0A			movlw	0Ah
-06986 ECAC			call	p_1F58
+06986 ECAC			call	p_ultraLongDelay
 06988 F00F			;nil
 0698A ECFF			call	setup_UART
 0698C F00F			;nil
@@ -14060,30 +14068,30 @@ F003FE FFFF
 069B0 6B93			clrf	93h,BANKED
 069B2 ECFA			call	p_25F4
 069B4 F012			;nil
-069B6 8280			bsf		PORTA,1
+069B6 8280			bsf		PORTA,1         ; reset release OKI chip
 069B8 0E0A			movlw	0Ah
-069BA ECAC			call	p_1F58
+069BA ECAC			call	p_ultraLongDelay
 069BC F00F			;nil
-069BE 9280			bcf		PORTA,1
+069BE 9280			bcf		PORTA,1         ; reset OKI chip
 069C0 0E03			movlw	3
 069C2 CFE8			movff	WREG,334h
 069C4 F334			;nil
 069C6 0103			movlb	3
-069C8 F000	p_69C8	;nil							; entry from: 69D0h
+069C8 F000	p_delay	;nil							; entry from: 69D0h
 069CA F000			;nil
 069CC F000			;nil
 069CE 2F34			decfsz	34h,f,BANKED
-069D0 EFE4			goto	p_69C8
+069D0 EFE4			goto	p_delay
 069D2 F034			;nil
-069D4 8280			bsf		PORTA,1
+069D4 8280			bsf		PORTA,1         ; reset release OKI chip
 069D6 0E32			movlw	32h
-069D8 ECAC			call	p_1F58
+069D8 ECAC			call	p_ultraLongDelay
 069DA F00F			;nil
-069DC EC2D			call	p_265A
+069DC EC2D			call	p_sendTableAt0x2A5toOKI
 069DE F013			;nil
 069E0 EC07			call	p_200E
 069E2 F010			;nil
-069E4 8AC6			bsf		SSPCON1,5
+069E4 8AC6			bsf		SSPCON1,5               ; enable SPI
 069E6 9A63			bcf		63h,5
 069E8 ECF5			call	p_5FEA
 069EA F02F			;nil
@@ -14223,7 +14231,7 @@ F003FE FFFF
 06AF6 EC2F			call	p_605E
 06AF8 F030			;nil
 06AFA 0EFA			movlw	0FAh
-06AFC ECAC			call	p_1F58
+06AFC ECAC			call	p_ultraLongDelay
 06AFE F00F			;nil
 06B00 860D			bsf		0Dh,3
 06B02 0103			movlb	3
@@ -18209,7 +18217,7 @@ F003FE FFFF
 08A1A ECF5			call	p__3EA
 08A1C F001			;nil
 08A1E D36B			bra		p_90F6
-08A20 ECE6			call	p__3CC
+08A20 ECE6			call	p_checkStopADPCM
 08A22 F001			;nil
 08A24 D368			bra		p_90F6
 08A26 0100			movlb	0
@@ -26000,7 +26008,7 @@ F003FE FFFF
 0C6F8 0C00			retlw	0
 0C6FA 0104	p_C6FA	movlb	4						; entry from: 0C518h
 0C6FC 6BB3			clrf	0B3h,BANKED
-0C6FE ECCE			call	p_619C
+0C6FE ECCE			call	p_readADC
 0C700 F030			;nil
 0C702 CFE8			movff	WREG,4B2h
 0C704 F4B2			;nil
@@ -26025,7 +26033,7 @@ F003FE FFFF
 0C72A B4D8			btfsc	STATUS,2
 0C72C 0E01			movlw	1
 0C72E D00E			bra		p_C74C
-0C730 ECCE	p_C730	call	p_619C					; entry from: 0C71Eh
+0C730 ECCE	p_C730	call	p_readADC					; entry from: 0C71Eh
 0C732 F030			;nil
 0C734 0100			movlb	0
 0C736 6F99			movwf	99h,BANKED
@@ -26205,15 +26213,15 @@ F003FE FFFF
 0C892 3602			rlcf	2
 0C894 3603			rlcf	3
 0C896 D7F7			bra		p_C886
-0C898 0009	p_C898	tblrd*+							; entry from: 0C8A2h,0C8A8h
+0C898 0009	copyTableToFSR0Addr	tblrd*+							; entry from: 0C8A2h,0C8A8h
 0C89A CFF5			movff	TABLAT,POSTINC0
 0C89C FFEE			;nil
-0C89E 50EA	p_C89E	movf	FSR0H,W					; entry from: 50h,68h
+0C89E 50EA	p_copyTableToFSR0Addr	movf	FSR0H,W					; entry from: 50h,68h
 0C8A0 62E2			cpfseq	FSR1H
-0C8A2 D7FA			bra		p_C898
+0C8A2 D7FA			bra		copyTableToFSR0Addr
 0C8A4 50E9			movf	FSR0L,W
 0C8A6 62E1			cpfseq	FSR1L
-0C8A8 D7F7			bra		p_C898
+0C8A8 D7F7			bra		copyTableToFSR0Addr
 0C8AA 0012			return	
 0C8AC 1E00	p_C8AC	comf	0						; entry from: 0DC2h,0DECh
 0C8AE 1E01			comf	1

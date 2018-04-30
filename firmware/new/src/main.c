@@ -249,6 +249,29 @@ unsigned char readButton()
 // Init Audio
 // ************************************************************
 
+const unsigned char OKI_INIT_TBL[19*2] =
+{
+    0x11, 0x63,
+    0x13, 0x21,
+    0x15, 0x00,
+    0x19, 0x01,
+    0x17, 0x1D,
+    0x17, 0x00,
+    0x57, 0x08,
+    0x55, 0x00,
+    0x41, 0xFF,
+    0x43, 0x00,
+    0x45, 0xFF,
+    0x63, 0x00,
+    0x37, 0x0F,
+    0x39, 0x00,
+    0x67, 0x19,
+    0x25, 0xCB,
+    0x21, 0x40,
+    0x23, 0xC0,
+    0x35, 0x01
+};
+
 void initAudio()
 {
     // setup clock to the OKI chip
@@ -268,7 +291,7 @@ void initAudio()
     T2CON = 0;              // timer 2 off, no prescalers
     PR2 = 0;
     T2CONbits.TMR2ON = 1;   // timer 2 on
-
+    
 }
 
 void resetAudio()
@@ -287,6 +310,21 @@ unsigned char ioAudioReg(unsigned char regNo, unsigned char data)
     return readData;
 }
 
+void setupOKIRegs()
+{
+    printf("Setting up OKI registers..\n\r");
+    unsigned char idx = 0;
+    for(unsigned char i=0; i<19; i++)
+    {
+        selectSPISlave(SEL_AUDIO);
+        ioAudioReg(OKI_INIT_TBL[idx], OKI_INIT_TBL[idx+1]);
+        idx += 2;
+        printf("+");    // delay
+        selectSPISlave(SEL_NONE);
+    }
+    printf("\n\r");
+}
+
 // ************************************************************
 // MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN 
 // ************************************************************
@@ -295,7 +333,9 @@ void main()
 {
     unsigned char ledData[16];
 
-    ADCON1 = 0b00001111;
+    ADCON0 = 1;             // original Nabaztag
+    ADCON1 = 0b00001111;    // original Nabaztag : value 0x0E
+    ADCON2 = 6;             // original Nabaztag
 
     initUART1();
     initSPI();
@@ -304,12 +344,13 @@ void main()
     initAudio();
     enableLEDS(1);
     resetAudio();
+    setupOKIRegs();
 
-    ioAudioReg(0x67, 0x11); // take OKI out of power down
-    ioAudioReg(0x63, 0x04); // 50% volume ( one channel only)    
-    ioAudioReg(0x43, 0xFF); // portio -> all outputs
-    ioAudioReg(0x41, 0x00); // port mode -> control by external CPU
-    ioAudioReg(0x45, 0x01); // enable amplifier
+    //ioAudioReg(0x67, 0x11); // take OKI out of power down
+    //ioAudioReg(0x63, 0x04); // 50% volume ( one channel only)    
+    //ioAudioReg(0x43, 0xFF); // portio -> all outputs
+    //ioAudioReg(0x41, 0x00); // port mode -> control by external CPU
+    //ioAudioReg(0x45, 0x01); // enable amplifier
 
     unsigned char led_idx = 0;
     unsigned char buttonState = 0;
@@ -322,8 +363,6 @@ void main()
         }
         ledData[led_idx] = 0x7F;
         setLEDBrightness(ledData, 0);
-        
-        resetAudio();
 
         unsigned char newState = readButton();
         if (newState != buttonState)

@@ -246,6 +246,75 @@ unsigned char readButton()
 }
 
 // ************************************************************
+// Motor control
+// ************************************************************
+
+typedef enum 
+{
+    MOTOR_STOP = 0,
+    MOTOR_CLOCKWISE,
+    MOTOR_ANTICLOCKWISE
+} motor_t;
+
+
+void setMotor1(motor_t state)
+{
+    // 0,1 is valid
+    // 0,0 is valid
+    // 1,0 is valid
+    // 1,1 does not appear in the source code
+    switch(state)
+    {
+    default:
+    case MOTOR_STOP:
+        PORTFbits.RF0 = 0;
+        PORTFbits.RF1 = 0;
+        break;
+    case MOTOR_CLOCKWISE:
+        PORTFbits.RF0 = 1;
+        PORTFbits.RF1 = 0;
+        break;
+    case MOTOR_ANTICLOCKWISE:
+        PORTFbits.RF0 = 0;
+        PORTFbits.RF1 = 1;
+        break;        
+    }
+}
+
+void setMotor2(motor_t state)
+{
+    switch(state)
+    {
+    default:
+    case MOTOR_STOP:
+        PORTFbits.RF2 = 0;
+        PORTFbits.RF3 = 0;
+        break;
+    case MOTOR_CLOCKWISE:
+        PORTFbits.RF2 = 1;
+        PORTFbits.RF3 = 0;
+        break;
+    case MOTOR_ANTICLOCKWISE:
+        PORTFbits.RF2 = 0;
+        PORTFbits.RF3 = 1;
+        break;        
+    }
+}
+
+void initMotors()
+{
+    setMotor1(MOTOR_STOP);
+    setMotor2(MOTOR_STOP);
+    TRISFbits.TRISF0 = 0;   // MCC1A output
+    TRISFbits.TRISF1 = 0;   // MCC1B output
+    TRISFbits.TRISF2 = 0;   // MCC2A output
+    TRISFbits.TRISF3 = 0;   // MCC2B output
+    setMotor1(MOTOR_STOP);
+    setMotor2(MOTOR_STOP);    
+}
+
+
+// ************************************************************
 // Init Audio
 // ************************************************************
 
@@ -334,12 +403,15 @@ void main()
     unsigned char ledData[16];
 
     ADCON0 = 1;             // original Nabaztag
-    ADCON1 = 0b00001111;    // original Nabaztag : value 0x0E
+    ADCON1 = 0b00001110;    // original Nabaztag : value 0x0E
     ADCON2 = 6;             // original Nabaztag
+    CMCON  = 7;             // original Nabaztag
+    CVRCON = 0;             // original Nabaztag
 
     initUART1();
     initSPI();
     initButton();
+    initMotors();
     initLEDS();
     initAudio();
     enableLEDS(1);
@@ -375,6 +447,19 @@ void main()
             }
             buttonState = newState;            
         }
+
+        if (newState == 0)
+        {
+            // button pressed
+            setMotor1(MOTOR_CLOCKWISE);
+            setMotor2(MOTOR_CLOCKWISE);
+        }
+        else
+        {
+            setMotor1(MOTOR_STOP);
+            setMotor2(MOTOR_STOP);
+        }
     }
+    
 }
 

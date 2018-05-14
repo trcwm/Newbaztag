@@ -42,10 +42,10 @@ void main()
                 ledIdx = ledIdx * 3;
 
                 g_ledData[ledIdx] = state.args[1]; // r
-                g_ledData[ledIdx+1] = state.args[2]; // g
-                g_ledData[ledIdx+2] = state.args[3]; // b
+                g_ledData[ledIdx+1] = state.args[2]; // b
+                g_ledData[ledIdx+2] = state.args[3]; // g
                 setLEDBrightness(g_ledData);
-                printf("LED %d r=%d g=%d b=%d\n\r", state.args[0], state.args[1], state.args[2], state.args[3]);
+                printf("LED %d r=%d b=%d g=%d\n\r", state.args[0], state.args[1], state.args[2], state.args[3]);
             }
             else if (ret == CMD_MOTOR)
             {

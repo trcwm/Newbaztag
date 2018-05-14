@@ -2,4 +2,4 @@
 --OBJDIR=objs \
 --OUTDIR=../bin \
 --opt=all -g \
-../src/main.c
+../src/main.c ../src/hardware.c 

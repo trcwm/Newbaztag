@@ -8,8 +8,8 @@ The LED driver, OKI audio chip and external flash memory are all connected to th
 * TI L293DNE motor driver.
 * AT45DB161 flash memory.
 * TLC5922 16 channel LED driver.
-* MPC6002 opamp.
-* ML2870A audio codec.
+* MPC6002 opamp used as a comparator.
+* OKI ML2870A audio codec.
 
 ### PIC18F6627 pin assignments
 
@@ -84,7 +84,7 @@ Gerrit remarks: SOUT of TLC5922 not connected
 * RC4 - to SO
 * RC5 - to SI
 
-### Audio chip (ML2870A)
+### Audio chip (OKI ML2870A)
 * RB2 - to IRQ
 * RC2 - to CLK
 * RA1 - to RST
@@ -134,3 +134,9 @@ register | value
 0x21, 0x40,
 0x23, 0xC0,
 0x35, 0x01
+
+## Motor position sensor
+The motor has an LED and a photo-sensitive element that generates pulses (pin 4 of the 8 pin motor connector). The signal is normally high and will go low 17 times during a complete rotation. The low times are approximately 190ms, the high times are approximately 240ms. This pulse sequence is followed by an extended high time of approximately 1.4 seconds.
+
+![Scope photo of motor signal](photos/motorsignal.jpg "Scope photo of motor signal")
+

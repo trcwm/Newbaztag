@@ -101,7 +101,22 @@ unsigned char protoSubmitToken(protocolState_t *protocol, unsigned char token)
             {
                 // no arguments
                 ret = CMD_UPDATE;
-            };
+            }
+            else if (cmd == 'R')
+            {
+                // report motors, no arguments
+                ret = CMD_REPORTMOTORS;
+            }
+            else if (cmd == 'T')
+            {
+                // report timer, no arguments
+                ret = CMD_REPORTTIMER;
+            }
+            else if (cmd == 'H')
+            {
+                // home motors, no arguments
+                ret = CMD_HOMEMOTORS;
+            }
         }
         break;
     case 10:   // LED n
@@ -156,14 +171,25 @@ unsigned char protoSubmitToken(protocolState_t *protocol, unsigned char token)
             protocol->tok_state = 0; // error
         }
         break;
-    case 21:   // Motor pos
+    case 21:   // Motor direction
         if (token == TOK_INT)
         {
             protocol->args[1] = atoi(protocol->buffer);
+            protocol->tok_state = 22;
+        }
+        else
+        {
+            protocol->tok_state = 0; // error
+        }
+        break;
+    case 22:   // Motor pulses
+        if (token == TOK_INT)
+        {
+            protocol->args[2] = atoi(protocol->buffer);
             ret = CMD_MOTOR;
         }
         protocol->tok_state = 0;
-        break;
+        break;        
     default:
         protocol->tok_state = 0;
     }

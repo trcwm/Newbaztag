@@ -12,6 +12,9 @@
 #define CMD_LED 1
 #define CMD_MOTOR 2
 #define CMD_UPDATE 3
+#define CMD_REPORTMOTORS 4
+#define CMD_REPORTTIMER 5
+#define CMD_HOMEMOTORS 6
 
 typedef enum
 {

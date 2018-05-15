@@ -6,6 +6,8 @@
 #include "hardware.h"
 #include "protocol.h"
 
+//#define DEBUGPROTOCOL
+
 unsigned char g_ledData[16];
 
 void main() 
@@ -41,22 +43,56 @@ void main()
                 if (ledIdx > 5) ledIdx = 5;
                 ledIdx = ledIdx * 3;
 
-                g_ledData[ledIdx] = state.args[1]; // r
+                g_ledData[ledIdx]   = state.args[1]; // r
                 g_ledData[ledIdx+1] = state.args[2]; // b
                 g_ledData[ledIdx+2] = state.args[3]; // g
                 setLEDBrightness(g_ledData);
+
+                #ifdef DEBUGPROTOCOL
                 printf("LED %d r=%d b=%d g=%d\n\r", state.args[0], state.args[1], state.args[2], state.args[3]);
+                #endif
+
+                UART1putByte('+');  // confirm command
             }
             else if (ret == CMD_MOTOR)
             {
-                printf("MOTOR %d pos=%d\n\r", state.args[0], state.args[1]);
+                #ifdef DEBUGPROTOCOL
+                printf("MOTOR %u dir=%u pulses=%u\n\r", state.args[0], state.args[1], state.args[2]);
+                #endif
+
+                runMotor(state.args[0], state.args[1], state.args[2]);
+
+                UART1putByte('+');  // confirm command
             }
             else if (ret == CMD_UPDATE)
             {
+                #ifdef DEBUGPROTOCOL
                 printf("LED update\n\r");
+                #endif
+
+                UART1putByte('+');  // confirm command
+            }
+            else if (ret == CMD_REPORTMOTORS)
+            {
+                printf("\n\r");
+                printf("MOTOR1 %u\n\r", getMotor1Count());
+                printf("MOTOR2 %u\n\r", getMotor2Count());
+                UART1putByte('+');  // confirm command
+            }
+            else if (ret == CMD_REPORTTIMER)
+            {
+                printf("\n\r");
+                printf("TIMER %u\n\r", getTimer());
+                UART1putByte('+');  // confirm command
+            }
+            else if (ret == CMD_HOMEMOTORS)
+            {
+                homeMotors();
+                UART1putByte('+');  // confirm command
             }
         }
 
+        //FIXME: we need to de-bounce the button!
         unsigned char buttonState = readButton();
         if ((prevButtonState != buttonState))
         {

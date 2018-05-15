@@ -5,6 +5,8 @@
 #ifndef hardware_h
 #define hardware_h
 
+#include <stdint.h>
+
 typedef enum 
 {
     MOTOR_STOP = 0,
@@ -43,7 +45,15 @@ void setLEDBrightness(unsigned char *ledData);
 
 unsigned char readButton();
 
-void setMotor1(motor_t state);
-void setMotor2(motor_t state);
+/* Init/Reset the position of the ear motors */
+void homeMotors();
+void runMotor(uint8_t ID, uint8_t direction, uint8_t pulses);
+
+uint16_t getMotor1Count();
+uint16_t getMotor2Count();
+
+/** read high-speed timer (runs at 750kHz) */
+void     resetTimer();
+uint16_t getTimer();
 
 #endif

@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include "hardware.h"
 
+//#define DEBUGHARDWARE
 
 // ************************************************************
 // EUSART
@@ -327,6 +328,24 @@ void setMotor2(motor_t state)
 
 void initMotors()
 {
+    // set motor pulse pins to inputs
+    TRISCbits.TRISC0 = 1;
+    TRISAbits.TRISA4 = 1;
+
+    // setup timers T0 and T3 to counter motor pulses
+    // both timers: count up on rising external pin
+    // no prescalers
+    TMR3H = 0;
+    TMR3L = 0;
+    TMR0H = 0;
+    TMR0L = 0;
+    T0CON = 0xA8;
+    T3CON = 0x87;
+    TMR3H = 0;
+    TMR3L = 0;
+    TMR0H = 0;
+    TMR0L = 0;
+
     setMotor1(MOTOR_STOP);
     setMotor2(MOTOR_STOP);
     TRISFbits.TRISF0 = 0;   // MCC1A output
@@ -337,6 +356,161 @@ void initMotors()
     setMotor2(MOTOR_STOP);    
 }
 
+typedef union 
+{
+    uint16_t count;
+    char     bt[2];
+} timerCount_t;
+
+uint16_t getMotor1Count()
+{
+    timerCount_t c;
+    c.bt[0] = TMR0L;
+    c.bt[1] = TMR0H;
+    return c.count;
+}
+
+uint16_t getMotor2Count()
+{
+    timerCount_t c;
+    c.bt[0] = TMR3L;
+    c.bt[1] = TMR3H;
+    return c.count;
+}
+
+// here we use the 750kHz timer to find motor pulses that are longer than 300ms
+// this signals that we're at the end of the 17-pulse pulse train.
+void homeMotors()
+{
+    resetTimer();
+
+    setMotor1(MOTOR_STOP);
+    setMotor2(MOTOR_STOP);
+
+    uint16_t m = getMotor1Count();
+
+    resetTimer();
+    setMotor1(MOTOR_CLOCKWISE);
+
+    // first do motor1
+    unsigned char done = 0;
+    while(!done)
+    {
+        while(m == getMotor1Count()) 
+        {
+        }; // wait for a motor pulse
+
+        #ifdef DEBUGHARDWARE
+        printf("*");
+        #endif
+
+        // check the timer setting
+        // for >500ms pulse width
+        if (getTimer() > 1400)
+        {
+            setMotor1(MOTOR_STOP);
+            done = 1;
+        }
+        resetTimer();
+        m = getMotor1Count();
+    }
+
+    resetTimer();
+    uint16_t m = getMotor2Count();
+    setMotor2(MOTOR_CLOCKWISE);
+
+    // now do motor2
+    done = 0;
+    while(!done)
+    {
+        while(m == getMotor2Count())
+        {        
+        }; // wait for a motor pulse
+
+        #ifdef DEBUGHARDWARE
+        printf("*");
+        #endif
+
+        // check the timer setting
+        // for >500ms pulse width
+        if (getTimer() > 1400)
+        {
+            setMotor2(MOTOR_STOP);
+            done = 1;
+        }
+        resetTimer();
+        m = getMotor2Count();
+    }
+};
+
+void runMotor(uint8_t ID, uint8_t direction, uint8_t pulses)
+{
+    if (pulses == 0)
+    {
+        return;
+    }
+
+    if (ID == 0)
+    {
+        unsigned char done = 0;
+        uint16_t m = getMotor1Count();
+
+        if (direction == 0)
+        {
+            setMotor1(MOTOR_CLOCKWISE);
+        }
+        else
+        {
+            setMotor1(MOTOR_ANTICLOCKWISE);
+        }
+
+        while(pulses > 0)
+        {
+            while(m == getMotor1Count()) 
+            {
+            }; // wait for a motor pulse
+
+            #ifdef DEBUGHARDWARE
+            printf("*");
+            #endif
+
+            pulses--;
+            m = getMotor1Count();
+        }
+
+        setMotor1(MOTOR_STOP);
+    }
+    else
+    {
+        unsigned char done = 0;
+        uint16_t m = getMotor2Count();
+
+        if (direction == 0)
+        {
+            setMotor2(MOTOR_CLOCKWISE);
+        }
+        else
+        {
+            setMotor2(MOTOR_ANTICLOCKWISE);
+        }
+
+        while(pulses > 0)
+        {
+            while(m == getMotor2Count()) 
+            {
+            }; // wait for a motor pulse
+
+            #ifdef DEBUGHARDWARE
+            printf("*");
+            #endif
+
+            pulses--;
+            m = getMotor2Count();
+        }
+
+        setMotor2(MOTOR_STOP);     
+    }
+}
 
 // ************************************************************
 // Init Audio
@@ -422,8 +596,16 @@ void setupOKIRegs()
 // Low priority interrupt 
 // ************************************************************
 
+uint8_t g_timer; // global timer1 overflow byte
+
 void interrupt low_priority LowIsr(void)
 {
+    // timer 1 interrupt
+    if (PIR1bits.TMR1IF == 1)
+    {
+        g_timer++;
+        PIR1bits.TMR1IF = 0;    // clear interrupt flag!
+    }
     // handle UART receive interrupt
     if (PIR1bits.RC1IF == 1)
     {
@@ -441,6 +623,29 @@ void interrupt low_priority LowIsr(void)
 }
 
 // ************************************************************
+// High speed timer
+// ************************************************************
+
+uint16_t getTimer()
+{
+    timerCount_t c;
+    c.bt[0] = TMR1H;
+    c.bt[1] = g_timer;
+    return c.count;
+}
+
+void resetTimer()
+{
+    di();
+    T1CONbits.TMR1ON = 0;
+    TMR1L = 0;
+    TMR1H = 0;
+    g_timer = 0;
+    T1CONbits.TMR1ON = 1;
+    ei();
+}
+
+// ************************************************************
 // Init hardware
 // ************************************************************
 
@@ -454,6 +659,16 @@ void initHardware()
     RCON = 0;
     RCONbits.IPEN = 1;
     INTCON = 0x80 | 0x40;   // enable interrupts
+
+
+    T1CON = 0x35;           // 1:8 Prescale value
+                            // enable timer, no sync
+                            // internal CLK/4 source
+                            // so runs at 750kHz
+
+    IPR1bits.TMR1IP = 0;    // timer 1 -> low priority int    
+    resetTimer();
+    PIE1bits.TMR1IE = 1;    // enable timer 1 interrupt
 
     initUART1();
     initSPI();

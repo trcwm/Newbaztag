@@ -56,4 +56,6 @@ uint16_t getMotor2Count();
 void     resetTimer();
 uint16_t getTimer();
 
+unsigned char debounceButton(unsigned char buttonRaw) ;
+
 #endif

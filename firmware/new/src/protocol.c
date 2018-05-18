@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include "protocol.h"
 
-unsigned char isWhitespace(char c)
+unsigned char isWhitespace(char c) // WhiteSpace or Separator
 {
-    if ((c==13) || (c==10) || (c==32) || (c=='\t'))
+    if ((c==13)||(c==10)||(c==32)||(c==44)||(c==45)||(c==46)||(c==58)||(c==59)||(c=='\t'))
     {
         return 1;
     }
@@ -23,7 +23,7 @@ unsigned char isDigit(char c)
 
 unsigned char isAlpha(char c)
 {
-    if ((c >= 'A') && (c <= 'Z'))
+    if ((c >= 'A') && (c <= 'Z')||(c >= 'a') && (c <= 'z'))
     {
         return 1;
     }
@@ -42,7 +42,7 @@ unsigned char protoSubmitByte(protocolState_t *protocol, char c)
             if (isAlpha(c))
             {
                 protocol->state = S_IDLE;
-                protocol->buffer[protocol->bufferIdx] = 0;    // add null terminator
+                protocol->buffer[protocol->bufferIdx] = 0;   // add null terminator
                 return TOK_CMD; // emit command ID
             }
             else if (isDigit(c))
@@ -89,37 +89,37 @@ unsigned char protoSubmitToken(protocolState_t *protocol, unsigned char token)
         if (token == TOK_CMD) // command
         {
             unsigned char cmd = protocol->buffer[0];
-            if (cmd == 'L')
+            if (cmd == 'L'||cmd == 'l')
             {
                 protocol->tok_state = 10;    // LED state
             }
-            else if (cmd == 'M')
+            else if (cmd == 'M'||cmd == 'm')
             {
                 protocol->tok_state = 20;    // Motor state
             }
-            else if (cmd == 'U')
+            else if (cmd == 'U'||cmd == 'u')
             {
                 // no arguments
                 ret = CMD_UPDATE;
             }
-            else if (cmd == 'R')
+            else if (cmd == 'R'||cmd == 'r')
             {
                 // report motors, no arguments
                 ret = CMD_REPORTMOTORS;
             }
-            else if (cmd == 'T')
+            else if (cmd == 'T'||cmd == 't')
             {
                 // report timer, no arguments
                 ret = CMD_REPORTTIMER;
             }
-            else if (cmd == 'H')
+            else if (cmd == 'H'||cmd == 'h')
             {
                 // home motors, no arguments
                 ret = CMD_HOMEMOTORS;
             }
         }
         break;
-    case 10:   // LED n
+    case 10:   // LED n -LED number
         if (token == TOK_INT)
         {
             protocol->args[0] = atoi(protocol->buffer);
@@ -130,7 +130,7 @@ unsigned char protoSubmitToken(protocolState_t *protocol, unsigned char token)
             protocol->tok_state = 0; // error
         }
         break;
-    case 11:   // LED r
+    case 11:   // LED r - LED red value
         if (token == TOK_INT)
         {
             protocol->args[1] = atoi(protocol->buffer);
@@ -141,7 +141,7 @@ unsigned char protoSubmitToken(protocolState_t *protocol, unsigned char token)
             protocol->tok_state = 0; // error
         }
         break;
-    case 12:   // LED g
+    case 12:   // LED b - LED Blue value
         if (token == TOK_INT)
         {
             protocol->args[2] = atoi(protocol->buffer);
@@ -152,7 +152,7 @@ unsigned char protoSubmitToken(protocolState_t *protocol, unsigned char token)
             protocol->tok_state = 0; // error
         }
         break;
-    case 13:   // LED b
+    case 13:   // LED g - LED Green Value
         if (token == TOK_INT)
         {
             protocol->args[3] = atoi(protocol->buffer);
@@ -160,7 +160,7 @@ unsigned char protoSubmitToken(protocolState_t *protocol, unsigned char token)
         }
         protocol->tok_state = 0;
         break;
-    case 20:   // Motor id
+    case 20:   // Motor id (0 or 1)
         if (token == TOK_INT)
         {
             protocol->args[0] = atoi(protocol->buffer);

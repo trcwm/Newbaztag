@@ -277,6 +277,16 @@ unsigned char readButton()
     return PORTBbits.RB0;
 }
 
+unsigned char debounceButton(unsigned char buttonRaw) 
+// simple and fascinating debouncer from internet 
+// documented here: http://www.ganssle.com/debouncing-pt2.htm
+{
+    static uint16_t State = 0; //current debounce status
+    State = (State<<1) | !buttonRaw | 0xe000;
+    if(State==0xf000)return 0;
+    return 1;
+}
+
 // ************************************************************
 // Motor control
 // ************************************************************

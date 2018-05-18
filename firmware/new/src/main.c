@@ -89,11 +89,12 @@ void main()
             {
                 homeMotors();
                 UART1putByte('+');  // confirm command
-            }
+            } 
         }
 
-        //FIXME: we need to de-bounce the button!
-        unsigned char buttonState = readButton();
+        //FIXME: we need to test the de-bounce the button!
+        unsigned char buttonRawState = readButton();
+        unsigned char buttonState = debounceButton(buttonRawState);
         if ((prevButtonState != buttonState))
         {
             prevButtonState = buttonState;

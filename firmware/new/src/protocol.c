@@ -3,9 +3,18 @@
 #include <stdio.h>
 #include "protocol.h"
 
-unsigned char isWhitespace(char c) // WhiteSpace or Separator
+unsigned char isSeparator(char c)   // Separator
 {
-    if ((c==13)||(c==10)||(c==32)||(c==44)||(c==45)||(c==46)||(c==58)||(c==59)||(c=='\t'))
+    if ((c==',') || (c=='-') || (c=='.') || (c==':') || (c==';'))
+    {
+        return 1;
+    }
+    return 0;
+}
+
+unsigned char isWhitespace(char c)  // WhiteSpace
+{
+    if ((c==13) || (c==10) || (c==' ') || (c=='\t'))
     {
         return 1;
     }
@@ -36,7 +45,7 @@ unsigned char protoSubmitByte(protocolState_t *protocol, char c)
     {
     case S_IDLE:
         protocol->bufferIdx = 0;
-        if (!isWhitespace(c))
+        if (!(isWhitespace(c) || isSeparator(c)))
         {
             protocol->buffer[protocol->bufferIdx++] = c;
             if (isAlpha(c))

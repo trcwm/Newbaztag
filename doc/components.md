@@ -114,7 +114,12 @@ TCON0 = 0xA8 (1010_1000)
 * transition on rising T0CKI edge
 * no prescaler
 
-TCON3 = 0x87 (1000_0111) ->
+TCON3 = 0x87 (1000_0111)
+* enable 16-bit I/O.
+* no prescaler.
+* Timer1 and Timer2 are the clock sources for ECCP1, ECCP2, ECCP3, CCP4 and CCP5
+* External clock input from Timer1 oscillator or T13CKI
+* Do not synchronize external clock input
 
 ## OKI sound chip
 
